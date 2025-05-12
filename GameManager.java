@@ -3,7 +3,6 @@ import java.util.List;
 import java.util.Random;
 
 public class GameManager {
-    //singleton stuff, only one instance
     private static GameManager instance;
     private List<Player> players;
     private List<Zombie> zombies;
@@ -15,13 +14,8 @@ public class GameManager {
     private int waveNumber;
     private boolean gameOver;
 
-    public boolean getGameOver() {
-        return gameOver;
-    }
-
     //private constructor for singleton
     private GameManager() {
-        //init all the lists and managers
         players = new ArrayList<>();
         zombies = new ArrayList<>();
         items = new ArrayList<>();
@@ -43,19 +37,17 @@ public class GameManager {
 
     //set up the game
     public void initialize() {
-        //create two players
-        PlayerFactory playerFactory = new PlayerFactory();
-        players.add(playerFactory.createPlayer("Jack"));
-        players.add(playerFactory.createPlayer("Emily"));
-        //start first wave
+        players.clear(); //clear existing players
+        zombies.clear();
+        items.clear();
+        waveNumber = 0;
+        gameOver = false;
         startNewWave();
-        //spawn an item
-        spawnItem();
+        spawnItem(); //spawn initial item
     }
 
     //main game loop, updates everything
     public void update() {
-        //if game over, save score and print
         if (gameOver) {
             scoreManager.saveScores();
             System.out.println("Game Over! Final Score: " + scoreManager.getPoints());
@@ -63,7 +55,7 @@ public class GameManager {
         }
 
         //every 5 updates, new wave
-        if (waveNumber % 5 == 0) {
+        if (waveNumber % 5 == 0 && zombies.isEmpty()) {
             waveNumber++;
             startNewWave();
             eventManager.notify(EventType.NEW_WAVE, waveNumber);
@@ -71,14 +63,12 @@ public class GameManager {
 
         //update players
         for (Player player : players) {
-            player.update();
-            //if player dies, game over
+            player.update(players);
             if (player.getHealth() <= 0) {
                 gameOver = true;
                 eventManager.notify(EventType.GAME_OVER, null);
                 return;
             }
-            //check for item pickups
             List<Item> itemsToRemove = new ArrayList<>();
             for (Item item : items) {
                 if (item.isPickedUp(player)) {
@@ -93,8 +83,7 @@ public class GameManager {
         //update zombies
         List<Zombie> zombiesToRemove = new ArrayList<>();
         for (Zombie zombie : zombies) {
-            zombie.update();
-            //if zombie dies, add points
+            zombie.update(players);
             if (zombie.getHealth() <= 0) {
                 scoreManager.addPoints(zombie.getPointValue());
                 zombiesToRemove.add(zombie);
@@ -118,13 +107,10 @@ public class GameManager {
 
     //start a new wave based on wave number
     public void startNewWave() {
-        //boss wave every 5th wave
         if (waveNumber % 5 == 0 && waveNumber > 0) {
             waveStrategy = new BossWave();
-            //cluster wave every 3rd wave
         } else if (waveNumber % 3 == 0) {
             waveStrategy = new ClusterWave();
-            //normal wave otherwise
         } else {
             waveStrategy = new UniformWave();
         }
@@ -135,13 +121,12 @@ public class GameManager {
     private void spawnItem() {
         double x = new Random().nextDouble() * (map.getWidth() - 20);
         double y = new Random().nextDouble() * (map.getHeight() - 20);
-        //make sure it doesn't spawn on obstacle
         if (!map.hasObstacle(x, y)) {
             items.add(new HealthItem(x, y));
         }
     }
 
-    //getters for other classes
+    // Getters for other classes
     public List<Player> getPlayers() {
         return players;
     }
@@ -154,11 +139,19 @@ public class GameManager {
         return map;
     }
 
+    public List<Item> getItems() {
+        return items;
+    }
+
     public int getWaveNumber() {
         return waveNumber;
     }
 
     public GameEventManager getEventManager() {
         return eventManager;
+    }
+
+    public boolean getGameOver() {
+        return gameOver;
     }
 }
