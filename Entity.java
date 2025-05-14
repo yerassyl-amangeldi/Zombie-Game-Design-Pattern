@@ -12,7 +12,8 @@ public abstract class Entity {
     }
 
     //every entity updates itself
-    public abstract void update();
+    public abstract void update(List<Player> players);
+
 
     //getters and setters
     public double getX() {

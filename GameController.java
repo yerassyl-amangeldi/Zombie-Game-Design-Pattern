@@ -1,4 +1,5 @@
 import javafx.animation.AnimationTimer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class GameController {
@@ -6,26 +7,72 @@ public class GameController {
     private final GameView view;
     private final List<Player> players;
     private int currentPlayerIndex;
+    private AnimationTimer gameLoop;
 
+    // Constructor
     public GameController(GameManager model, GameView view) {
         this.model = model;
         this.view = view;
-        this.players = model.getPlayers();
+        this.players = new ArrayList<>();
         this.currentPlayerIndex = 0;
-        setupGame();
+
+        // Show character selection screen
+        view.showCharacterSelection();
+        view.setCharacterSelectionHandler("Jack", character -> startGame(character));
+        view.setCharacterSelectionHandler("Emily", character -> startGame(character));
+        view.setCharacterSelectionHandler("Brad", character -> startGame(character));
+        view.setRestartHandler(this::restartGame);
+    }
+
+    // Start the game with the chosen character
+    private void startGame(String character) {
+        // Reset game state
+        model.initialize();
+        players.clear();
+        model.getPlayers().clear();
+
+        // Create the chosen player
+        PlayerFactory factory = new PlayerFactory();
+        if (character.equals("Jack")) {
+            players.add(factory.createPlayer("Jack"));
+        } else if (character.equals("Emily")) {
+            players.add(factory.createPlayer("Emily"));
+        } else if (character.equals("Brad")) {
+            Player brad = factory.createPlayer("Brad");
+            brad.setHealth(120);
+            brad.setSpeed(6);
+            players.add(brad);
+        }
+
+        // Add player to GameManager
+        model.getPlayers().addAll(players);
+
         setupInput();
+        view.showGameScreen();
         startGameLoop();
     }
 
-    private void setupGame() {
-        PlayerFactory factory = new PlayerFactory();
-        players.add(factory.createPlayer("Jack"));
-        players.add(factory.createPlayer("Emily"));
+    // Restart the game
+    private void restartGame() {
+        // Reset everything
+        model.initialize();
+        players.clear();
+        model.getPlayers().clear();
+        currentPlayerIndex = 0;
+        if (gameLoop != null) {
+            gameLoop.stop();
+        }
+
+        // Go back to character selection
+        view.showCharacterSelection();
     }
 
+    // Set up input handling
     private void setupInput() {
         view.getScene().setOnKeyPressed(event -> {
+            if (players == null || players.isEmpty()) return;
             Player currentPlayer = players.get(currentPlayerIndex);
+            if (currentPlayer == null) return;
             Command command = null;
             switch (event.getCode().toString().toLowerCase()) {
                 case "w" -> command = new MoveCommand(0, -currentPlayer.getSpeed());
@@ -43,19 +90,26 @@ public class GameController {
         });
     }
 
+    // Start the game loop
     private void startGameLoop() {
-        new AnimationTimer() {
+        if (gameLoop != null) {
+            gameLoop.stop();
+        }
+        gameLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 if (!model.getGameOver()) {
                     model.update();
-                    view.renderGame(players, model.getZombies(), model.getItems());
+                    List<Zombie> zombies = model.getZombies() != null ? model.getZombies() : new ArrayList<>();
+                    List<Item> items = model.getItems() != null ? model.getItems() : new ArrayList<>();
+                    view.renderGame(players, zombies, items);
                     view.updateHUD(model.getWaveNumber(), ScoreManager.getInstance().getPoints(), players);
                 } else {
                     stop();
-                    System.out.println("Game Over!");
+                    view.showGameOverScreen();
                 }
             }
-        }.start();
+        };
+        gameLoop.start();
     }
 }
