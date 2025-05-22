@@ -1,7 +1,7 @@
 import java.util.*;
 
 class Zombie extends Entity {
-    //zombie stats
+
     private String type;
     private double speed;
     private int damage;
@@ -11,7 +11,7 @@ class Zombie extends Entity {
     private static final double POISON_DURATION = 10.0;
     private static final double POISON_DAMAGE_PER_SECOND = 0.02;
 
-    //constructor
+
     public Zombie(String type, double x, double y, int health, double speed, int damage, int pointValue, ZombieBehavior behavior, boolean isPoisonous) {
         super(x, y, health);
         this.type = type;
@@ -37,7 +37,15 @@ class Zombie extends Entity {
         }
     }
 
-    //find closest player
+    public void update(List<Player> players) {
+        GameManager gameManager = GameManager.getInstance();
+        behavior.execute(this, findNearestPlayer(), gameManager.getZombies());
+    }
+
+    public void attack(Player player) {
+        player.setHealth(player.getHealth() - damage);
+    }
+
     public Player findNearestPlayer() {
         GameManager gameManager = GameManager.getInstance();
         Player nearest = null;
@@ -66,4 +74,32 @@ class Zombie extends Entity {
     public String getType() {
         return type;
     }
+
 }
+
+    public void takeDamage(int damage) {
+        health -= damage;
+    }
+
+    public boolean isPoisonous() {
+        return isPoisonous;
+    }
+
+    // Добавляем геттеры и сеттеры для координат
+    public double getX() {
+        return x;
+    }
+
+    public void setX(double x) {
+        this.x = x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public void setY(double y) {
+        this.y = y;
+    }
+}
+

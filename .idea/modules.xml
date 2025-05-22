@@ -2,7 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+<<<<<<< HEAD
       <module fileurl="file://$PROJECT_DIR$/Saniya shablon.iml" filepath="$PROJECT_DIR$/Saniya shablon.iml" />
+=======
+      <module fileurl="file://$PROJECT_DIR$/.idea/Saniya.iml" filepath="$PROJECT_DIR$/.idea/Saniya.iml" />
+>>>>>>> 3f4cffe (redesigned)
     </modules>
   </component>
 </project>

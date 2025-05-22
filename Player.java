@@ -1,3 +1,4 @@
+
 import java.util.*;
 
 class Player extends Entity {
@@ -136,5 +137,133 @@ class Player extends Entity {
 
     public boolean isPoisoned() {
         return isPoisoned;
+=======
+import javafx.scene.paint.Color;
+
+public class Player {
+    private String name;
+    private double x, y;
+    private int health;
+    private int speed;
+    private Weapon weapon;
+    private int layer;
+    private Ability ability;
+    private double targetX, targetY;
+    private double smoothedTargetX, smoothedTargetY;
+    private boolean moving;
+    private double velocityX, velocityY;
+    private Color color;
+
+    public Player(String name, int x, int y, int speed, Weapon weapon, int layer, Ability ability) {
+        this.name = name;
+        this.x = x;
+        this.y = y;
+        this.speed = speed;
+        this.health = 100;
+        this.weapon = weapon;
+        this.layer = layer;
+        this.ability = ability;
+        this.targetX = x;
+        this.targetY = y;
+        this.smoothedTargetX = x;
+        this.smoothedTargetY = y;
+        this.moving = false;
+        this.velocityX = 0;
+        this.velocityY = 0;
+    }
+
+    public void setTarget(double targetX, double targetY) {
+        this.targetX = targetX;
+        this.targetY = targetY;
+        this.moving = true;
+    }
+
+    public void update() {
+        if (!moving) {
+            velocityX *= 0.9; //speed decrease
+            velocityY *= 0.9;
+            if (Math.abs(velocityX) < 0.1) velocityX = 0;
+            if (Math.abs(velocityY) < 0.1) velocityY = 0;
+        }
+
+        //smooth position
+        double smoothingFactor = 0.1; //for better smooth
+        smoothedTargetX += (targetX - smoothedTargetX) * smoothingFactor;
+        smoothedTargetY += (targetY - smoothedTargetY) * smoothingFactor;
+
+        double dx = smoothedTargetX - x;
+        double dy = smoothedTargetY - y;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 5) {
+            x = smoothedTargetX;
+            y = smoothedTargetY;
+            moving = false;
+            return;
+        }
+
+        //smooth speed change
+        if (distance > 0) {
+            double maxVelocity = speed * 0.05;
+            velocityX += ((dx / distance) * maxVelocity - velocityX) * 0.05;
+            velocityY += ((dy / distance) * maxVelocity - velocityY) * 0.05;
+        }
+
+        //update position
+        x += velocityX;
+        y += velocityY;
+
+        x = Math.max(0, Math.min(800, x));
+        y = Math.max(0, Math.min(600, y));
+
+        GameManager.getInstance().getParticles().add(
+                new Particle(x, y, 0, 0, 0.5, Color.CYAN)
+        );
+
+    }
+
+    public void attack() {
+        if (weapon != null) {
+            weapon.shoot();
+            System.out.println(name + " attacked with " + weapon.getDamage() + " damage!");
+        }
+    }
+
+    public void useAbility() {
+        if (ability != null) {
+            ability.execute(this);
+        } else {
+            System.out.println(name + " has no ability to use!");
+        }
+    }
+
+    public String getName() {
+        return name;
+    }
+    public double getX() {
+        return x;
+    }
+
+    public void setX(double x) {
+        this.x = x; }
+    public double getY() { return y;
+    }
+    public void setY(double y) {
+        this.y = y;
+    }
+    public int getSpeed() {
+        return speed;
+    }
+    public void setSpeed(int speed) {
+        this.speed = speed;
+    }
+    public int getHealth() {
+        return health;
+    }
+    public void setHealth(int health) {
+        this.health = health;
+    }
+    public void takeDamage(int damage) {
+
     }
 }
