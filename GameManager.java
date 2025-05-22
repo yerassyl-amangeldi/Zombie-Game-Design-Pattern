@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import javafx.scene.paint.Color;
 
 public class GameManager {
     private static GameManager instance;
@@ -12,22 +13,22 @@ public class GameManager {
     private GameEventManager eventManager;
     private WaveStrategy waveStrategy;
     private int waveNumber;
+    private List<Particle> particles;
     private boolean gameOver;
 
-    //private constructor for singleton
     private GameManager() {
         players = new ArrayList<>();
         zombies = new ArrayList<>();
         items = new ArrayList<>();
         scoreManager = ScoreManager.getInstance();
+        particles = new ArrayList<>();
         eventManager = new GameEventManager();
         map = new Map(800, 600);
         waveNumber = 0;
-        waveStrategy = new UniformWave();
+        waveStrategy = new UniformWave(zombies);
         gameOver = false;
     }
 
-    //get the single instance
     public static GameManager getInstance() {
         if (instance == null) {
             instance = new GameManager();
@@ -35,18 +36,16 @@ public class GameManager {
         return instance;
     }
 
-    //set up the game
     public void initialize() {
-        players.clear(); //clear existing players
+        players.clear();
         zombies.clear();
         items.clear();
         waveNumber = 0;
         gameOver = false;
         startNewWave();
-        spawnItem(); //spawn initial item
+        spawnItem();
     }
 
-    //main game loop, updates everything
     public void update() {
         if (gameOver) {
             scoreManager.saveScores();
@@ -54,16 +53,14 @@ public class GameManager {
             return;
         }
 
-        //every 5 updates, new wave
         if (waveNumber % 5 == 0 && zombies.isEmpty()) {
             waveNumber++;
             startNewWave();
             eventManager.notify(EventType.NEW_WAVE, waveNumber);
         }
 
-        //update players
         for (Player player : players) {
-            player.update(players);
+            player.update();
             if (player.getHealth() <= 0) {
                 gameOver = true;
                 eventManager.notify(EventType.GAME_OVER, null);
@@ -80,24 +77,36 @@ public class GameManager {
             items.removeAll(itemsToRemove);
         }
 
-        //update zombies
+        // Обновляем зомби и удаляем мёртвых
         List<Zombie> zombiesToRemove = new ArrayList<>();
         for (Zombie zombie : zombies) {
-            zombie.update(players);
+            zombie.update(players); // Обновляем зомби один раз
             if (zombie.getHealth() <= 0) {
                 scoreManager.addPoints(zombie.getPointValue());
                 zombiesToRemove.add(zombie);
                 eventManager.notify(EventType.ZOMBIE_KILLED, zombie);
+                // Добавляем частицы крови
+                for (int i = 0; i < 10; i++) {
+                    double dx = (new Random().nextDouble() - 0.5) * 5;
+                    double dy = (new Random().nextDouble() - 0.5) * 5;
+                    particles.add(new Particle(zombie.getX(), zombie.getY(), dx, dy, 1.0, Color.RED));
+                }
             }
         }
         zombies.removeAll(zombiesToRemove);
 
-        //20% chance to spawn an item
+        // 20% шанс спавна предмета
         if (new Random().nextDouble() < 0.2) {
             spawnItem();
         }
 
-        //print game state to console
+        // Обновляем частицы
+        particles.removeIf(p -> !p.isAlive());
+        for (Particle particle : particles) {
+            particle.update();
+        }
+
+        // Вывод состояния игры
         System.out.println("Wave: " + waveNumber + ", Score: " + scoreManager.getPoints());
         for (Player player : players) {
             System.out.println(player.getName() + " HP: " + player.getHealth() + ", Pos: (" + player.getX() + ", " + player.getY() + ")");
@@ -105,19 +114,18 @@ public class GameManager {
         System.out.println("Zombies: " + zombies.size() + ", Items: " + items.size());
     }
 
-    //start a new wave based on wave number
     public void startNewWave() {
         if (waveNumber % 5 == 0 && waveNumber > 0) {
-            waveStrategy = new BossWave();
+            waveStrategy = new BossWave(zombies);
         } else if (waveNumber % 3 == 0) {
-            waveStrategy = new ClusterWave();
+            waveStrategy = new ClusterWave(zombies);
         } else {
-            waveStrategy = new UniformWave();
+            waveStrategy = new UniformWave(zombies);
         }
+        System.out.println("Starting wave " + waveNumber + " with strategy: " + waveStrategy.getClass().getSimpleName());
         waveStrategy.spawnWave();
     }
 
-    //spawn a random health item
     private void spawnItem() {
         double x = new Random().nextDouble() * (map.getWidth() - 20);
         double y = new Random().nextDouble() * (map.getHeight() - 20);
@@ -126,7 +134,6 @@ public class GameManager {
         }
     }
 
-    // Getters for other classes
     public List<Player> getPlayers() {
         return players;
     }
@@ -153,5 +160,9 @@ public class GameManager {
 
     public boolean getGameOver() {
         return gameOver;
+    }
+
+    public List<Particle> getParticles() {
+        return particles;
     }
 }
